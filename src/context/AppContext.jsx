@@ -72,8 +72,8 @@ export function AppProvider({ children }) {
     return { completed, total: 40, percentage: Math.round((completed / 40) * 100) }
   }
 
-  function saveWord(word, category) {
-    const entry = { word, category, date: new Date().toISOString(), id: Date.now() }
+  function saveWord(word, category, hindiMeaning = '') {
+    const entry = { word, category, hindiMeaning, date: new Date().toISOString(), id: Date.now() }
     setVocabulary(prev => {
       if (prev.some(v => v.word.toLowerCase() === word.toLowerCase())) return prev
       return [entry, ...prev]

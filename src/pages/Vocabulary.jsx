@@ -95,6 +95,9 @@ export default function Vocabulary() {
             >
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>{item.word}</p>
+                {item.hindiMeaning && (
+                  <p className="text-xs mt-0.5 font-medium" style={{ color: '#a78bfa' }}>{item.hindiMeaning}</p>
+                )}
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text3)' }}>
                   {item.category} · {formatDate(item.date)}
                 </p>

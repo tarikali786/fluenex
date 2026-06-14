@@ -121,7 +121,7 @@ export default function ReaderScreen() {
 
   function handleSave() {
     if (!selectedWord) return
-    saveWord(selectedWord, isCustom ? 'Custom' : categoryId)
+    saveWord(selectedWord, isCustom ? 'Custom' : categoryId, hindiMeaning)
     dismissToolbar()
   }
 
