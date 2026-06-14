@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Trophy } from 'lucide-react'
+import { Trophy, ArrowLeft } from 'lucide-react'
 import { useApp } from '../context/AppContext'
+import { useAutoScroll } from '../hooks/useAutoScroll'
 
 const LEVELS = [
   { id: 'beginner',     label: 'Beginner',     target: 60,  icon: '🥉', color: '#cd7f32', desc: 'Build reading confidence'  },
@@ -15,9 +16,86 @@ const WPM_TEXT =
 
 const WORD_COUNT = WPM_TEXT.trim().split(/\s+/).length
 
+// ── WPM Reader (full-screen auto-scroll) ────────────────────────────────────
+function WPMReader({ readingMode, onFinish }) {
+  const { containerRef, contentRef, isPaused, progress, isFinished, toggle } =
+    useAutoScroll(readingMode)
+
+  // Auto-finish when scroll completes
+  useEffect(() => {
+    if (isFinished) onFinish()
+  }, [isFinished, onFinish])
+
+  return (
+    <div className="fixed inset-0" style={{ background: '#0a0a0f' }}>
+      {/* Progress bar */}
+      <div className="absolute top-0 left-0 right-0 h-0.5 z-20" style={{ background: '#1a1a28' }}>
+        <div
+          className="h-full transition-all duration-300"
+          style={{ width: `${Math.round(progress * 100)}%`, background: '#7c3aed' }}
+        />
+      </div>
+
+      {/* Header */}
+      <div
+        className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-10 pb-6 pointer-events-none"
+        style={{ background: 'linear-gradient(to bottom, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0) 100%)' }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444', animation: 'pulse 1s infinite' }} />
+          <p className="text-sm pointer-events-none" style={{ color: '#8b8ba8' }}>Reading…</p>
+        </div>
+        <button
+          className="pointer-events-auto px-3 py-1.5 rounded-xl text-xs font-semibold text-white"
+          style={{ background: '#7c3aed' }}
+          onClick={onFinish}
+        >
+          Done
+        </button>
+      </div>
+
+      {/* Tap to pause/resume */}
+      <div className="absolute inset-0 z-0" onClick={toggle} />
+
+      {/* Scrolling text */}
+      <div ref={containerRef} className="absolute inset-0 overflow-hidden">
+        <div
+          ref={contentRef}
+          className="mx-auto px-6"
+          style={{
+            maxWidth: '680px',
+            paddingTop: '95vh',
+            paddingBottom: '90vh',
+            willChange: 'transform',
+            fontSize: '20px',
+            lineHeight: '1.9',
+            color: '#f1f1f5',
+            fontFamily: "Georgia, 'Times New Roman', serif",
+          }}
+        >
+          <p>{WPM_TEXT}</p>
+        </div>
+      </div>
+
+      {/* Paused indicator */}
+      {isPaused && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+          <div
+            className="px-7 py-4 rounded-2xl"
+            style={{ background: 'rgba(14,14,20,0.92)', backdropFilter: 'blur(24px)', border: '1px solid #252535' }}
+          >
+            <p className="font-semibold text-base" style={{ color: '#f1f1f5' }}>⏸ Paused</p>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Main WPMChallenge ────────────────────────────────────────────────────────
 export default function WPMChallenge() {
   const navigate = useNavigate()
-  const { achievements, addAchievement } = useApp()
+  const { settings, achievements, addAchievement } = useApp()
 
   const [phase, setPhase] = useState('select')
   const [selectedLevel, setSelectedLevel] = useState(null)
@@ -49,6 +127,7 @@ export default function WPMChallenge() {
   }, [phase, countdown])
 
   function finishReading() {
+    if (phase !== 'reading') return
     const minutesElapsed = (Date.now() - startTime) / 1000 / 60
     const calculatedWpm = Math.round(WORD_COUNT / minutesElapsed)
     setWpm(calculatedWpm)
@@ -68,6 +147,11 @@ export default function WPMChallenge() {
   }
 
   const passed = selectedLevel && wpm >= selectedLevel.target
+
+  // Full-screen reading phase — rendered outside normal layout
+  if (phase === 'reading') {
+    return <WPMReader readingMode={settings.readingMode} onFinish={finishReading} />
+  }
 
   return (
     <div className="px-4 pt-14 pb-6 max-w-lg mx-auto">
@@ -135,32 +219,6 @@ export default function WPMChallenge() {
             {countdown > 0 ? countdown : 'Go!'}
           </div>
         </div>
-      )}
-
-      {/* Reading */}
-      {phase === 'reading' && (
-        <>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 rounded-full" style={{ background: '#ef4444', animation: 'pulse 1s infinite' }} />
-            <p className="text-sm" style={{ color: 'var(--text2)' }}>Read as fast as you can, then tap Done</p>
-          </div>
-          <div
-            className="rounded-2xl border p-5 mb-5"
-            style={{
-              background: 'var(--card)',
-              borderColor: 'var(--border)',
-              fontSize: '17px',
-              lineHeight: '1.85',
-              color: 'var(--text)',
-              fontFamily: "Georgia, 'Times New Roman', serif",
-            }}
-          >
-            {WPM_TEXT}
-          </div>
-          <button onClick={finishReading} className="w-full py-4 rounded-2xl font-semibold text-white" style={{ background: '#7c3aed' }}>
-            Done Reading
-          </button>
-        </>
       )}
 
       {/* Result */}
