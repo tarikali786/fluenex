@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+@theme {
+  --color-app: #0a0a0f;
+  --color-card: #111118;
+  --color-surface: #1a1a28;
+  --color-border: #252535;
+  --color-accent: #7c3aed;
+  --color-accent-light: #a78bfa;
+  --color-accent-dim: #7c3aed26;
+  --color-primary: #f1f1f5;
+  --color-secondary: #8b8ba8;
+  --color-muted: #52526a;
+  --color-success: #10b981;
+  --color-success-dim: #10b98120;
+  --color-warning: #f59e0b;
+  --color-warning-dim: #f59e0b20;
+  --color-danger: #ef4444;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* ── Theme tokens ───────────────────────────────────────── */
+:root {
+  --bg:      #0a0a0f;
+  --card:    #111118;
+  --surface: #1a1a28;
+  --border:  #252535;
+  --text:    #f1f1f5;
+  --text2:   #8b8ba8;
+  --text3:   #52526a;
+  --bg-t95:  rgba(10,10,15,0.95);
+  --bg-t88:  rgba(10,10,15,0.88);
+}
+
+body.light {
+  --bg:      #f0f0f5;
+  --card:    #ffffff;
+  --surface: #e8e8f2;
+  --border:  #d5d5e0;
+  --text:    #0a0a0f;
+  --text2:   #52526a;
+  --text3:   #8b8ba8;
+  --bg-t95:  rgba(240,240,245,0.95);
+  --bg-t88:  rgba(240,240,245,0.88);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #252535;
+  border-radius: 2px;
+}
+
+/* Tap highlight */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe area for iOS notch */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
