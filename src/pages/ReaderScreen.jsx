@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
-import { ArrowLeft, CheckCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle, RefreshCw, Languages, Volume2, StopCircle } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { getDayContent } from '../data/challengeContent'
 import { useAutoScroll } from '../hooks/useAutoScroll'
+import useTTS from '../hooks/useTTS'
 import SelectionToolbar from '../components/SelectionToolbar'
+import { generateContent } from '../utils/ai-content-generator'
+import { translateToHindi } from '../utils/translate'
+import { getItem, setItem } from '../utils/storage'
 
 const FONT_STYLES = {
   small:         { fontSize: '17px', lineHeight: '1.85' },
@@ -17,23 +21,95 @@ export default function ReaderScreen() {
   const { categoryId, day } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { settings, markDayComplete, saveWord, showToast } = useApp()
+  const { settings, markDayComplete, saveWord, showToast, userProfile } = useApp()
 
   const dayNum = parseInt(day, 10)
   const isCustom = location.state?.isCustom === true
 
   const dayData = !isCustom ? getDayContent(categoryId, dayNum) : null
-  const content = isCustom
-    ? (location.state?.content || '')
-    : (dayData?.content || '')
   const title = isCustom
     ? (location.state?.title || 'Reading')
     : (dayData?.title || `Day ${dayNum}`)
+
+  // ── AI content state ─────────────────────────────────────────────────────
+  const [aiContent, setAiContent] = useState(() => {
+    if (isCustom) return ''
+    return getItem(`ai_content_${categoryId}_day_${dayNum}`) || ''
+  })
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiError, setAiError] = useState(null)
+  const [isRegenerating, setIsRegenerating] = useState(false)
+
+  // ── Hindi translation state ───────────────────────────────────────────────
+  const [hindiContent, setHindiContent] = useState('')
+  const [isTranslated, setIsTranslated] = useState(false)
+  const [isTranslating, setIsTranslating] = useState(false)
+  const [hasTranslation, setHasTranslation] = useState(false)
+  const hindiCacheKey = `ai_hindi_${categoryId}_day_${dayNum}`
+
+  const cacheKey = `ai_content_${categoryId}_day_${dayNum}`
+
+  const content = isCustom
+    ? (location.state?.content || '')
+    : (aiContent || dayData?.content || '')
+
+
+  function handleRegenerate() {
+    if (isRegenerating) return
+    setIsRegenerating(true)
+    setIsTranslated(false)
+    setHindiContent('')
+    setHasTranslation(false)
+    generateContent({
+      category: categoryId,
+      day: dayNum,
+      mode: settings.readingMode,
+      profile: userProfile,
+      refTitle: dayData?.title || null,
+      refContent: dayData?.content || null,
+    })
+      .then(text => { setItem(cacheKey, text); setAiContent(text) })
+      .catch(() => showToast('Failed to regenerate. Try again.'))
+      .finally(() => setIsRegenerating(false))
+  }
+
+  async function handleTranslate() {
+    if (isTranslating) return
+    const cached = getItem(hindiCacheKey)
+    if (cached) {
+      setHindiContent(cached)
+      setHasTranslation(true)
+      setIsTranslated(true)
+      return
+    }
+    setIsTranslating(true)
+    try {
+      const hindi = await translateToHindi(content)
+      setItem(hindiCacheKey, hindi)
+      setHindiContent(hindi)
+      setHasTranslation(true)
+      setIsTranslated(true)
+    } catch {
+      showToast('Translation failed. Try again.')
+    } finally {
+      setIsTranslating(false)
+    }
+  }
+
+  function handleUndo() { setIsTranslated(false) }
+  function handleRedo() { if (hasTranslation) setIsTranslated(true) }
+
+  useEffect(() => {
+    if (isTranslated) pause()
+  }, [isTranslated])
 
   // ── Overlay (pause/resume tap feedback) ──────────────────────────────────
   const [overlayVisible, setOverlayVisible] = useState(false)
   const [overlayText, setOverlayText] = useState('')
   const overlayTimer = useRef(null)
+
+  // ── TTS ──────────────────────────────────────────────────────────────────
+  const { speak, stop: stopTTS, speaking: ttsSpeaking, supported: ttsSupported, gender: ttsGender, toggleGender } = useTTS()
 
   // ── Auto-scroll engine ───────────────────────────────────────────────────
   const { containerRef, contentRef, isPaused, progress, isFinished, toggle, pause, resume } =
@@ -134,7 +210,7 @@ export default function ReaderScreen() {
   useEffect(() => {
     return () => {
       clearTimeout(overlayTimer.current)
-      window.speechSynthesis?.cancel()
+      stopTTS()
     }
   }, [])
 
@@ -194,10 +270,110 @@ export default function ReaderScreen() {
         >
           <ArrowLeft size={20} />
         </button>
-        <p className="text-sm font-medium truncate pointer-events-none" style={{ color: '#52526a' }}>
+        <p className="text-sm font-medium truncate flex-1 pointer-events-none" style={{ color: '#52526a' }}>
           {isCustom ? title : `Day ${dayNum} — ${title}`}
         </p>
+        <button
+          className="pointer-events-auto p-2 rounded-xl"
+          style={{ color: isTranslating ? '#7c3aed' : isTranslated ? '#a78bfa' : '#8b8ba8' }}
+          onClick={e => { e.stopPropagation(); handleTranslate() }}
+          title="Translate to Hindi"
+          disabled={isTranslating}
+        >
+          <Languages size={18} className={isTranslating ? 'animate-pulse' : ''} />
+        </button>
+        {ttsSupported && (
+          <>
+            <button
+              className="pointer-events-auto px-2 py-1 rounded-lg text-xs font-bold transition-all"
+              style={{ color: '#8b8ba8', background: 'rgba(255,255,255,0.05)', border: '1px solid #252535' }}
+              onClick={e => { e.stopPropagation(); toggleGender(); if (ttsSpeaking) { stopTTS(); setTimeout(() => speak(isTranslated ? hindiContent : content), 80) } }}
+              title={`Voice: ${ttsGender}`}
+            >
+              {ttsGender === 'female' ? '♀' : '♂'}
+            </button>
+            <button
+              className="pointer-events-auto p-2 rounded-xl"
+              style={{ color: ttsSpeaking ? '#a78bfa' : '#8b8ba8' }}
+              onClick={e => { e.stopPropagation(); ttsSpeaking ? stopTTS() : speak(isTranslated ? hindiContent : content) }}
+              title={ttsSpeaking ? 'Stop speaking' : 'Listen'}
+            >
+              {ttsSpeaking ? <StopCircle size={18} /> : <Volume2 size={18} />}
+            </button>
+          </>
+        )}
+        {!isCustom && (
+          <button
+            className="pointer-events-auto p-2 -mr-2 rounded-xl"
+            style={{ color: isRegenerating ? '#7c3aed' : '#8b8ba8' }}
+            onClick={e => { e.stopPropagation(); handleRegenerate() }}
+            title="Regenerate content"
+            disabled={isRegenerating}
+          >
+            <RefreshCw size={18} className={isRegenerating ? 'animate-spin' : ''} />
+          </button>
+        )}
       </div>
+
+      {/* Hindi content — manual scroll overlay */}
+      {isTranslated && (
+        <div
+          className="absolute inset-0 overflow-y-auto z-10"
+          style={{ background: '#0a0a0f' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div
+            className="mx-auto px-6"
+            style={{
+              maxWidth: '680px',
+              paddingTop: '90px',
+              paddingBottom: '100px',
+              ...fs,
+              color: '#f1f1f5',
+              fontFamily: "'Noto Sans Devanagari', sans-serif",
+              lineHeight: '2.1',
+            }}
+          >
+            {hindiContent.split('\n').map((para, i) =>
+              para.trim() ? (
+                <p key={i} style={{ marginBottom: '1.6em' }}>
+                  {para.trim()}
+                </p>
+              ) : null
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Undo / Redo bar */}
+      {(isTranslated || hasTranslation) && (
+        <div
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-4 py-2 rounded-2xl"
+          style={{
+            background: 'rgba(14,14,20,0.92)',
+            backdropFilter: 'blur(24px)',
+            border: '1px solid #252535',
+          }}
+        >
+          <button
+            onClick={e => { e.stopPropagation(); handleUndo() }}
+            disabled={!isTranslated}
+            className="px-3 py-1 rounded-xl text-sm font-medium"
+            style={{ color: isTranslated ? '#f1f1f5' : '#52526a' }}
+          >
+            ← English
+          </button>
+          <div style={{ width: '1px', height: '16px', background: '#252535' }} />
+          <button
+            onClick={e => { e.stopPropagation(); handleRedo() }}
+            disabled={isTranslated || !hasTranslation}
+            className="px-3 py-1 rounded-xl text-sm font-medium"
+            style={{ color: !isTranslated && hasTranslation ? '#f1f1f5' : '#52526a' }}
+          >
+            हिंदी →
+          </button>
+        </div>
+      )}
 
       {/* Scrolling content — overflow hidden, moved via translateY */}
       <div ref={containerRef} className="absolute inset-0 overflow-hidden">

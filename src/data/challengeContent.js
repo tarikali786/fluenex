@@ -3,7 +3,7 @@ const dailySpeaking = [
     day: 1,
     title: "First Words",
     content:
-      "Hello, good morning. My name is Tarik and I am learning English every day. I want to improve my speaking and reading skills. Today is my first practice session. I will read slowly and clearly. Learning a new language takes time, but I am ready to practice daily and become more confident.",
+      "Hello, good morning. My name is Jhon and I am learning English every day. I want to improve my speaking and reading skills. Today is my first practice session. I will read slowly and clearly. Learning a new language takes time, but I am ready to practice daily and become more confident.",
   },
   {
     day: 2,

@@ -42,8 +42,9 @@ function Radio({ checked, color = '#7c3aed' }) {
   )
 }
 
+
 export default function Settings() {
-  const { settings, updateSetting, resetAllData } = useApp()
+  const { settings, updateSetting, resetAllData, userProfile, updateProfile } = useApp()
 
   function handleReset() {
     if (window.confirm('Reset all data? This will clear your progress, vocabulary, and achievements.')) {
@@ -110,6 +111,25 @@ export default function Settings() {
             <Radio checked={settings.readingMode === value} />
           </button>
         ))}
+      </Section>
+
+      {/* About Me */}
+      <Section title="About Me — Personalize AI Content">
+        <div className="px-4 py-3">
+          <textarea
+            rows={5}
+            value={userProfile.about}
+            onChange={e => updateProfile('about', e.target.value)}
+            placeholder="Tell me about yourself... e.g. My name is Rahul, I'm a software engineer from Mumbai. I enjoy cricket and cooking. I'm learning English to grow in my career."
+            className="w-full bg-transparent text-sm resize-none outline-none"
+            style={{ color: 'var(--text)', caretColor: '#7c3aed' }}
+          />
+        </div>
+        <div className="px-4 pb-3">
+          <p className="text-xs" style={{ color: 'var(--text3)' }}>
+            AI will weave your details naturally into reading passages.
+          </p>
+        </div>
       </Section>
 
       {/* Data */}

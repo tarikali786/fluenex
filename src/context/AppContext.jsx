@@ -9,6 +9,8 @@ const DEFAULT_SETTINGS = {
   readingMode: 'intermediate',
 }
 
+const DEFAULT_PROFILE = { about: '' }
+
 const DEFAULT_PROGRESS = {
   currentCategory: 'daily-speaking',
   currentDay: 1,
@@ -28,15 +30,23 @@ export function AppProvider({ children }) {
   const [achievements, setAchievements] = useState(() =>
     getItem('achievements', [])
   )
+  const [userProfile, setUserProfile] = useState(() =>
+    getItem('userProfile', DEFAULT_PROFILE)
+  )
   const [toast, setToast] = useState(null)
 
   useEffect(() => { setItem('settings', settings) }, [settings])
   useEffect(() => { setItem('progress', progress) }, [progress])
   useEffect(() => { setItem('vocabulary', vocabulary) }, [vocabulary])
   useEffect(() => { setItem('achievements', achievements) }, [achievements])
+  useEffect(() => { setItem('userProfile', userProfile) }, [userProfile])
 
   function updateSetting(key, value) {
     setSettings(prev => ({ ...prev, [key]: value }))
+  }
+
+  function updateProfile(key, value) {
+    setUserProfile(prev => ({ ...prev, [key]: value }))
   }
 
   function setActiveCategory(categoryId) {
@@ -111,6 +121,7 @@ export function AppProvider({ children }) {
     setProgress(DEFAULT_PROGRESS)
     setVocabulary([])
     setAchievements([])
+    setUserProfile(DEFAULT_PROFILE)
     showToast('All data has been reset.')
   }
 
@@ -125,8 +136,10 @@ export function AppProvider({ children }) {
       progress,
       vocabulary,
       achievements,
+      userProfile,
       toast,
       updateSetting,
+      updateProfile,
       setActiveCategory,
       getCurrentDay,
       markDayComplete,

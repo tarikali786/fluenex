@@ -1,35 +1,56 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Copy, Trash2, PlayCircle } from 'lucide-react'
+import { Sparkles, Trash2, PlayCircle, Volume2, Pause, Square, Languages, StopCircle } from 'lucide-react'
 import { useApp } from '../context/AppContext'
-import { CATEGORIES } from '../data/categories'
-
-const AI_PROMPTS = {
-  'daily-speaking': `Generate a 300-word English reading passage for daily speaking practice.\n\nRequirements:\n- Natural conversational English\n- Easy to read aloud\n- Builds fluency and confidence\n- Paragraph format only\n- No headings or bullet points`,
-  'job-interview': `Generate a 300-word English reading passage about professional job interview language.\n\nRequirements:\n- Professional vocabulary and scenarios\n- Interview responses and conversations\n- Confident and formal tone\n- Paragraph format only\n- No headings or bullet points`,
-  'travel-english': `Generate a 300-word English reading passage about traveling and using English abroad.\n\nRequirements:\n- Travel scenarios and common dialogues\n- Practical phrases for airports, hotels, and restaurants\n- Friendly and useful tone\n- Paragraph format only\n- No headings or bullet points`,
-  'office-communication': `Generate a 300-word English reading passage about workplace communication.\n\nRequirements:\n- Professional office English\n- Email, meeting, and collaboration language\n- Formal but natural tone\n- Paragraph format only\n- No headings or bullet points`,
-  'technology-english': `Generate a 300-word English reading passage about technology topics.\n\nRequirements:\n- Technology vocabulary and concepts\n- Clear explanations for modern readers\n- Engaging and informative\n- Paragraph format only\n- No headings or bullet points`,
-  custom: `Generate a 300-word English reading passage.\n\nRequirements:\n- Natural and engaging\n- Good sentence variety\n- Easy to read aloud\n- Paragraph format only\n- No headings or bullet points`,
-}
-
-const allCategories = [
-  ...CATEGORIES,
-  { id: 'custom', name: 'Custom', icon: '✨', color: '#7c3aed' },
-]
+import { generateContent, translateToHindi } from '../utils/ai-content-generator'
+import useTTS from '../hooks/useTTS'
 
 export default function CustomReader() {
   const navigate = useNavigate()
-  const { showToast } = useApp()
-  const [selectedCategory, setSelectedCategory] = useState('daily-speaking')
+  const { showToast, settings, userProfile } = useApp()
+  const { speak, pause, resume, stop, speaking, paused, supported: ttsSupported, gender: ttsGender, toggleGender } = useTTS()
   const [content, setContent] = useState('')
+  const [ttsRate, setTtsRate] = useState(1)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [userPrompt, setUserPrompt] = useState('')
+  const [hindiContent, setHindiContent] = useState('')
+  const [showHindi, setShowHindi] = useState(false)
+  const [isTranslating, setIsTranslating] = useState(false)
 
-  function copyPrompt() {
-    const prompt = AI_PROMPTS[selectedCategory] || AI_PROMPTS.custom
-    navigator.clipboard
-      .writeText(prompt)
-      .then(() => showToast('Prompt copied! Paste it into ChatGPT or Claude.'))
-      .catch(() => showToast('Copy failed — please copy manually.', 'error'))
+  async function handleGenerate() {
+    setIsGenerating(true)
+    try {
+      const text = await generateContent({
+        category: 'general english',
+        day: 1,
+        mode: settings.readingMode,
+        profile: userProfile,
+        userPrompt: userPrompt.trim() || null,
+      })
+      setContent(text)
+      setHindiContent('')
+      setShowHindi(false)
+    } catch {
+      showToast('Generation failed. Try again.', 'error')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  async function handleTranslate() {
+    if (!content.trim()) return
+    if (showHindi) { setShowHindi(false); return }
+    if (hindiContent) { setShowHindi(true); return }
+    setIsTranslating(true)
+    try {
+      const hindi = await translateToHindi(content)
+      setHindiContent(hindi)
+      setShowHindi(true)
+    } catch {
+      showToast('Translation failed. Try again.', 'error')
+    } finally {
+      setIsTranslating(false)
+    }
   }
 
   function startReading() {
@@ -44,45 +65,86 @@ export default function CustomReader() {
 
   return (
     <div className="px-4 pt-14 pb-4 max-w-lg mx-auto flex flex-col" style={{ minHeight: 'calc(100svh - 4.5rem)' }}>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Custom Reader</h1>
-        <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>Paste any English content and start reading</p>
+      <div className="flex items-start justify-between mb-5">
+        <div>
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text)' }}>Custom Reader</h1>
+          <p className="text-sm mt-1" style={{ color: 'var(--text2)' }}>Paste any English content and start reading</p>
+        </div>
+
+        {content.trim() && (
+          <div className="flex items-center gap-2 mt-1">
+            {/* Translate to Hindi */}
+            <button
+              onClick={handleTranslate}
+              disabled={isTranslating}
+              title={showHindi ? 'Show English' : 'Translate to Hindi'}
+              className="flex items-center justify-center w-9 h-9 rounded-xl border transition-all active:scale-95 disabled:opacity-50"
+              style={{
+                background: showHindi ? 'rgba(16,185,129,0.15)' : 'var(--card)',
+                borderColor: showHindi ? '#10b98155' : 'var(--border)',
+                color: showHindi ? '#10b981' : 'var(--text2)',
+              }}
+            >
+              {isTranslating
+                ? <Sparkles size={15} className="animate-pulse" />
+                : <Languages size={15} />}
+            </button>
+
+            {/* Speak */}
+            {ttsSupported && (
+              <button
+                onClick={() => speaking ? stop() : speak(content, ttsRate)}
+                title={speaking ? 'Stop' : 'Listen'}
+                className="flex items-center justify-center w-9 h-9 rounded-xl border transition-all active:scale-95"
+                style={{
+                  background: speaking ? 'rgba(124,58,237,0.15)' : 'var(--card)',
+                  borderColor: speaking ? '#7c3aed55' : 'var(--border)',
+                  color: speaking ? '#a78bfa' : 'var(--text2)',
+                }}
+              >
+                {speaking ? <StopCircle size={15} /> : <Volume2 size={15} />}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Category selector */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
-        {allCategories.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setSelectedCategory(cat.id)}
-            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium border transition-all"
-            style={{
-              background: selectedCategory === cat.id ? `${cat.color}18` : 'var(--card)',
-              borderColor: selectedCategory === cat.id ? `${cat.color}55` : 'var(--border)',
-              color: selectedCategory === cat.id ? cat.color : 'var(--text2)',
-            }}
-          >
-            <span>{cat.icon}</span>
-            <span>{cat.name}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Copy AI prompt */}
-      <button
-        onClick={copyPrompt}
-        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl border text-sm font-medium mb-3 transition-all active:scale-[0.98]"
-        style={{ background: 'var(--card)', borderColor: 'var(--border)', color: '#a78bfa' }}
+      {/* Custom prompt input */}
+      <div
+        className="flex items-center gap-2 w-full rounded-2xl border px-4 py-3 mb-3"
+        style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
       >
-        <Copy size={15} />
-        Copy AI Prompt
+        <Sparkles size={14} style={{ color: '#52526a', flexShrink: 0 }} />
+        <input
+          type="text"
+          value={userPrompt}
+          onChange={e => setUserPrompt(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && !isGenerating && handleGenerate()}
+          placeholder="e.g. Write about morning gym routine…"
+          className="flex-1 bg-transparent text-sm outline-none"
+          style={{ color: 'var(--text)', caretColor: '#7c3aed' }}
+        />
+        {userPrompt && (
+          <button onClick={() => setUserPrompt('')} style={{ color: '#52526a' }}>✕</button>
+        )}
+      </div>
+
+      {/* Generate with AI */}
+      <button
+        onClick={handleGenerate}
+        disabled={isGenerating}
+        className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-sm font-semibold mb-3 transition-all active:scale-[0.98] disabled:opacity-70"
+        style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.35)', color: '#a78bfa' }}
+      >
+        <Sparkles size={15} className={isGenerating ? 'animate-pulse' : ''} />
+        {isGenerating ? 'Generating…' : 'Generate with AI'}
       </button>
 
       {/* Textarea */}
       <textarea
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        placeholder="Paste your reading content here..."
+        value={showHindi ? hindiContent : content}
+        onChange={e => showHindi ? setHindiContent(e.target.value) : setContent(e.target.value)}
+        placeholder="Generate with AI above, or paste your own content here…"
         className="flex-1 w-full rounded-2xl border p-4 text-sm resize-none focus:outline-none transition-colors"
         style={{
           background: 'var(--card)',
@@ -95,10 +157,74 @@ export default function CustomReader() {
         onBlur={e => (e.target.style.borderColor = 'var(--border)')}
       />
 
+      {/* TTS Controls */}
+      {ttsSupported && content.trim() && (
+        <div
+          className="flex items-center gap-3 rounded-2xl border px-4 py-3 mt-3"
+          style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+        >
+          <Volume2 size={15} style={{ color: '#a78bfa', flexShrink: 0 }} />
+            <button
+              onClick={() => { toggleGender(); if (speaking) { stop(); setTimeout(() => speak(content, ttsRate), 80) } }}
+              className="text-xs font-bold px-1.5 py-0.5 rounded-lg border"
+              style={{ color: '#8b8ba8', borderColor: 'var(--border)', background: 'rgba(255,255,255,0.04)' }}
+              title={`Voice: ${ttsGender}`}
+            >
+              {ttsGender === 'female' ? '♀' : '♂'}
+            </button>
+
+          {!speaking ? (
+            <button
+              onClick={() => speak(content, ttsRate)}
+              className="flex items-center gap-1.5 text-sm font-medium"
+              style={{ color: '#a78bfa' }}
+            >
+              Listen
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={paused ? resume : pause}
+                className="flex items-center gap-1 text-sm font-medium"
+                style={{ color: '#a78bfa' }}
+              >
+                {paused ? <PlayCircle size={15} /> : <Pause size={15} />}
+                {paused ? 'Resume' : 'Pause'}
+              </button>
+              <button
+                onClick={stop}
+                className="flex items-center gap-1 text-sm font-medium"
+                style={{ color: '#ef4444' }}
+              >
+                <Square size={13} />
+                Stop
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2 ml-auto">
+            {[0.75, 1, 1.25, 1.5].map(r => (
+              <button
+                key={r}
+                onClick={() => { setTtsRate(r); if (speaking) { stop(); setTimeout(() => speak(content, r), 100) } }}
+                className="text-xs px-2 py-0.5 rounded-lg border transition-all"
+                style={{
+                  borderColor: ttsRate === r ? '#7c3aed55' : 'var(--border)',
+                  background: ttsRate === r ? 'rgba(124,58,237,0.15)' : 'transparent',
+                  color: ttsRate === r ? '#a78bfa' : 'var(--text2)',
+                }}
+              >
+                {r}x
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex gap-3 mt-3">
         <button
-          onClick={() => setContent('')}
+          onClick={() => { stop(); setContent(''); setHindiContent(''); setShowHindi(false) }}
           disabled={!content}
           className="flex items-center gap-1.5 px-4 py-3 rounded-2xl border text-sm font-medium transition-all active:scale-[0.98] disabled:opacity-30"
           style={{ background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--text2)' }}
