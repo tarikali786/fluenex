@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const src = join(__dirname, 'src/assets/logo.png')
+const src = join(__dirname, 'src/assets/favicon.png')
 const pub = join(__dirname, 'public')
 
 const BG = { r: 10, g: 10, b: 15, alpha: 1 }
