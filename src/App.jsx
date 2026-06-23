@@ -10,6 +10,9 @@ import CustomReader from './pages/CustomReader'
 import Vocabulary from './pages/Vocabulary'
 import WPMChallenge from './pages/WPMChallenge'
 import Settings from './pages/Settings'
+import GrammarHome from './pages/GrammarHome'
+import GrammarDetail from './pages/GrammarDetail'
+import GrammarReader from './pages/GrammarReader'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -22,6 +25,9 @@ export default function App() {
             <Route path="/challenge" element={<ReadingChallenge />} />
             <Route path="/challenge/:categoryId" element={<ChallengeDetail />} />
             <Route path="/challenge/:categoryId/day/:day" element={<ReaderScreen />} />
+            <Route path="/grammar" element={<GrammarHome />} />
+            <Route path="/grammar/:topicId" element={<GrammarDetail />} />
+            <Route path="/grammar/:topicId/read" element={<GrammarReader />} />
             <Route path="/custom" element={<CustomReader />} />
             <Route path="/vocabulary" element={<Vocabulary />} />
             <Route path="/wpm" element={<WPMChallenge />} />

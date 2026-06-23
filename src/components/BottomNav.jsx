@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, BookOpen, FileText, Star, Settings } from 'lucide-react'
+import { Home, BookOpen, GraduationCap, FileText, Star, Settings } from 'lucide-react'
 
 const tabs = [
   { to: '/', icon: Home, label: 'Home' },
   { to: '/challenge', icon: BookOpen, label: 'Challenge' },
+  { to: '/grammar', icon: GraduationCap, label: 'Grammar' },
   { to: '/custom', icon: FileText, label: 'Reader' },
-  { to: '/vocabulary', icon: Star, label: 'Vocabulary' },
+  { to: '/vocabulary', icon: Star, label: 'Vocab' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 

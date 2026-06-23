@@ -9,7 +9,7 @@ export default function AppLayout() {
   const location = useLocation()
 
   // Reader screen occupies the full viewport — hide the bottom nav
-  const isReader = /\/day\/\d+$/.test(location.pathname)
+  const isReader = /\/day\/\d+$/.test(location.pathname) || /\/grammar\/[^/]+\/read$/.test(location.pathname)
 
   useEffect(() => {
     document.body.classList.toggle('light', settings.theme === 'light')

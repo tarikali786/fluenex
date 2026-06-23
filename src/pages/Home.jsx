@@ -1,15 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, FileText, Zap, Star, Settings } from 'lucide-react'
+import { BookOpen, FileText, Zap, Star, Settings, GraduationCap, ChevronRight } from 'lucide-react'
 import { useApp } from '../context/AppContext'
 import { CATEGORIES } from '../data/categories'
+import { GRAMMAR_CATEGORIES, getTensesByCategory } from '../data/grammarContent'
 import logo from '../assets/logo.png'
 
 const features = [
-  { icon: BookOpen, title: 'Reading Challenge', desc: '40-day fluency program',  route: '/challenge',  color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
-  { icon: FileText, title: 'Custom Reader',     desc: 'Paste any content',       route: '/custom',     color: '#0891b2', bg: 'rgba(8,145,178,0.12)'  },
-  { icon: Zap,      title: 'WPM Challenge',     desc: 'Improve reading speed',   route: '/wpm',        color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
-  { icon: Star,     title: 'Vocabulary',        desc: 'Your saved words',        route: '/vocabulary', color: '#059669', bg: 'rgba(5,150,105,0.12)'  },
-  { icon: Settings, title: 'Settings',          desc: 'Customize your app',      route: '/settings',   color: '#8b8ba8', bg: 'rgba(139,139,168,0.12)'},
+  { icon: BookOpen,      title: 'Reading Challenge', desc: '40-day fluency program',  route: '/challenge',  color: '#7c3aed', bg: 'rgba(124,58,237,0.12)' },
+  { icon: GraduationCap, title: 'Grammar',           desc: 'Learn all 12 tenses',     route: '/grammar',    color: '#e11d48', bg: 'rgba(225,29,72,0.12)'  },
+  { icon: FileText,      title: 'Custom Reader',     desc: 'Paste any content',       route: '/custom',     color: '#0891b2', bg: 'rgba(8,145,178,0.12)'  },
+  { icon: Zap,           title: 'WPM Challenge',     desc: 'Improve reading speed',   route: '/wpm',        color: '#f59e0b', bg: 'rgba(245,158,11,0.12)' },
+  { icon: Star,          title: 'Vocabulary',        desc: 'Your saved words',        route: '/vocabulary', color: '#059669', bg: 'rgba(5,150,105,0.12)'  },
+  { icon: Settings,      title: 'Settings',          desc: 'Customize your app',      route: '/settings',   color: '#8b8ba8', bg: 'rgba(139,139,168,0.12)'},
 ]
 
 export default function Home() {
@@ -92,6 +94,32 @@ export default function Home() {
           ))}
         </div>
       )}
+
+      {/* Grammar / Tenses section */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold" style={{ color: 'var(--text)' }}>Tenses</p>
+          <button onClick={() => navigate('/grammar')} className="flex items-center gap-0.5 text-xs" style={{ color: '#a78bfa' }}>
+            View all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {GRAMMAR_CATEGORIES.map(cat => {
+            const tenses = getTensesByCategory(cat.id)
+            return tenses.map(t => (
+              <button
+                key={t.id}
+                onClick={() => navigate(`/grammar/${t.id}`)}
+                className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-all active:scale-95"
+                style={{ background: 'var(--card)', borderColor: 'var(--border)' }}
+              >
+                <span className="text-lg">{t.icon}</span>
+                <span className="text-xs font-medium whitespace-nowrap" style={{ color: 'var(--text)' }}>{t.title}</span>
+              </button>
+            ))
+          })}
+        </div>
+      </div>
 
       {/* Feature grid */}
       <div className="grid grid-cols-2 gap-3">
