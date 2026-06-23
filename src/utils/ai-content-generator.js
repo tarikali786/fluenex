@@ -58,6 +58,34 @@ Rules:
 Write the passage now:`;
 }
 
+async function generateWithOpenRouter(prompt, systemMessage) {
+  const response = await fetch(
+    "https://openrouter.ai/api/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": window.location.origin,
+        "X-Title": "Fluenex",
+      },
+      body: JSON.stringify({
+        model: "openai/gpt-4o",
+        messages: [
+          { role: "system", content: systemMessage },
+          { role: "user", content: prompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 1500,
+      }),
+    },
+  );
+
+  if (!response.ok) throw new Error(`OpenRouter Error: ${response.status}`);
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
 async function generateWithGroq(prompt, systemMessage) {
   const response = await fetch(
     "https://api.groq.com/openai/v1/chat/completions",
@@ -94,13 +122,15 @@ async function generateWithGemini(prompt) {
 
 export async function translateToHindi(text) {
   const prompt = `Translate the following English text to Hindi. Return only the Hindi translation, nothing else.\n\n${text}`;
+  const system = "You are a professional translator. Translate accurately.";
   try {
-    return await generateWithGroq(
-      prompt,
-      "You are a professional translator. Translate accurately.",
-    );
+    return await generateWithOpenRouter(prompt, system);
   } catch {
-    return await generateWithGemini(prompt);
+    try {
+      return await generateWithGemini(prompt);
+    } catch {
+      return await generateWithGroq(prompt, system);
+    }
   }
 }
 
@@ -132,11 +162,11 @@ export async function generateContent({
     : "You are an English fluency coach. Write natural reading passages for language learners.";
 
   try {
-    const text = await generateWithGroq(prompt, systemMessage);
-    console.log("[AI] Generated with Groq");
+    const text = await generateWithOpenRouter(prompt, systemMessage);
+    console.log("[AI] Generated with OpenRouter (GPT-4o)");
     return text;
-  } catch (groqError) {
-    console.warn("[Groq Failed] Switching to Gemini...", groqError.message);
+  } catch (openRouterError) {
+    console.warn("[OpenRouter Failed] Switching to Gemini...", openRouterError.message);
     try {
       const text = await generateWithGemini(
         isCustomPrompt ? prompt : `${systemMessage}\n\n${prompt}`,
@@ -144,8 +174,15 @@ export async function generateContent({
       console.log("[AI] Generated with Gemini");
       return text;
     } catch (geminiError) {
-      console.error("[Gemini Failed]", geminiError);
-      throw new Error("Unable to generate content from both Groq and Gemini.");
+      console.warn("[Gemini Failed] Switching to Groq...", geminiError.message);
+      try {
+        const text = await generateWithGroq(prompt, systemMessage);
+        console.log("[AI] Generated with Groq");
+        return text;
+      } catch (groqError) {
+        console.error("[Groq Failed]", groqError);
+        throw new Error("Unable to generate content from all providers.");
+      }
     }
   }
 }
